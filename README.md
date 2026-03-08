@@ -1,206 +1,296 @@
-# Trading System Pro
+# MT5 Multi-Strategy Trader
 
-**19 strategies · 4 instruments · Real-time MT5 scanner · Dash dashboard**
+**25 Strategies -- 6 Instruments -- Real-Time Dashboard -- MetaTrader 5**
 
-A professional-grade automated strategy scanner that connects to MetaTrader 5,
-evaluates 19 trading strategies across Gold (XAUUSD), NAS100, US500, and US30,
-fires multi-channel alerts, maintains a trading journal, and displays everything
-on a real-time web dashboard.
+A professional-grade automated strategy scanner that connects to MetaTrader 5, runs 25 independent trading strategies across Gold, NAS100, US500, US30, BTC, and ETH. Features a real-time Plotly Dash dashboard, confluence-based signal scoring, backtesting engine, risk management, trade journaling, and alert system.
 
 ---
 
 ## Architecture
 
 ```
-main.py                     ← Entry point (orchestrator)
-├── core/
-│   ├── mt5_connection.py   ← Thread-safe MT5 singleton
-│   ├── data_feed.py        ← Multi-TF cache & polling engine
-│   └── risk_manager.py     ← Position sizing & loss limits
-├── indicators/
-│   ├── trend.py            ← EMA, SMA, VWAP, Supertrend
-│   ├── momentum.py         ← RSI, MACD, Stochastic, divergence
-│   ├── volatility.py       ← Bollinger, ATR, Keltner, Asian range
-│   ├── volume.py           ← Volume SMA, surge, OBV
-│   └── structure.py        ← BOS, order blocks, FVG, S/R, Fib
-├── strategies/
-│   ├── base.py             ← BaseStrategy ABC + Signal model
-│   ├── gold_strategies.py  ← A-H (8 strategies)
-│   ├── nas100_strategies.py← I-M (5 strategies)
-│   ├── us500_strategies.py ← N-P (3 strategies)
-│   └── us30_strategies.py  ← Q-S (3 strategies)
-├── alerts/
-│   └── alert_engine.py     ← Desktop/Sound/Telegram + dedup
-├── journal/
-│   └── journal.py          ← SQLite journal + MT5 sync + analytics
-└── dashboard/
-    ├── layout.py           ← Dash UI components
-    ├── charts.py           ← Plotly candlestick + overlays
-    └── app.py              ← Dash callbacks (6 real-time panels)
++------------------+     +------------------+     +------------------+
+|   MT5 Terminal   | --> |    Data Feed     | --> |   25 Strategies  |
+|  (Live Prices)   |     | (Multi-TF OHLCV) |     |  (A through Y)   |
++------------------+     +------------------+     +--------+---------+
+                                                           |
+                                                    Signals + Scores
+                                                           |
+                    +--------------------------------------+
+                    |              |              |         |
+              +-----+----+  +-----+----+  +------+---+  +-+--------+
+              | Dashboard |  |   Risk   |  |  Alert   |  | Journal  |
+              | (Dash UI) |  | Manager  |  |  Engine  |  | (SQLite) |
+              +-----------+  +----------+  +----------+  +----------+
 ```
 
-## Strategies
+### Data Flow
 
-| ID | Name | Instrument | Style | R:R |
-|----|------|-----------|-------|-----|
-| A | London Breakout Trap | Gold | Scalp | 1:2 |
-| B | VWAP+OB Sniper | Gold | Scalp | 1:2 |
-| C | News Spike Fade | Gold | Scalp | 1:1.5 |
-| D | DXY Divergence | Gold | Day | 1:2 |
-| E | Session Transition | Gold | Day | 1:2 |
-| F | Trendline Break+Retest | Gold | Day | 1:2.5 |
-| G | Weekly Institutional | Gold | Swing | 1:3 |
-| H | Fibonacci Cluster | Gold | Swing | 1:4 |
-| I | Opening Range Breakout | NAS100 | Scalp | 1:2 |
-| J | EMA Ribbon Scalp | NAS100 | Scalp | 1:1.5 |
-| K | ICT Power of 3 | NAS100 | Scalp | 1:3 |
-| L | Gap Fill | NAS100 | Day | 1:1.5 |
-| M | 20/50 EMA Pullback | NAS100 | Swing | 1:2.5 |
-| N | VWAP Mean Reversion | US500 | Scalp | 1:1.75 |
-| O | Multi-TF Trend | US500 | Day | 1:2 |
-| P | RSI + Structure | US500 | Swing | 1:2.5 |
-| Q | Round Number Bounce | US30 | Scalp | 1:2 |
-| R | ICT Silver Bullet | US30 | Day | 1:3 |
-| S | Breakout-Retest | US30 | Swing | 1:3 |
-
-## Prerequisites
-
-- **Windows** (required for MT5)
-- **Python 3.10+**
-- **MetaTrader 5** terminal installed, running, and **logged in** to your broker
-- Symbols available: XAUUSD, USTEC/NAS100, US500, US30
-
-## Quick Start
-
-### Option 1: Run Script (Recommended)
-```batch
-run.bat
 ```
-This creates a virtual environment, installs dependencies, and launches the system.
+MT5 OHLCV (M1/M5/M15/H1/H4/D1/W1)
+        |
+        v
+  Indicators (Momentum, Trend, Volatility, Structure, Volume)
+        |
+        v
+  Strategy.analyze() --> Raw Signal (direction, entry, SL, TP)
+        |
+        v
+  ConfluenceEngine.score() --> Scored Signal (0-100, quality tier)
+        |
+        v
+  RiskManager.validate() --> Position sizing, daily limits
+        |
+        v
+  Dashboard display + Alert notifications + Journal logging
+```
 
-### Option 2: Manual Setup
+---
+
+## All 25 Strategies
+
+### Gold (XAUUSD) -- 8 Strategies
+
+| ID | Name | Style | Timeframes | Session |
+|----|------|-------|-----------|---------|
+| A | London Breakout Trap | Scalp | M5, M15 | London Open |
+| B | VWAP+OB Sniper | Scalp | M1, M5 | NY Open |
+| C | News Spike Fade | Scalp | M1, M5 | NY Open, London |
+| D | DXY Divergence | Day | M15, H1 | London-NY Overlap |
+| E | Session Transition | Day | M15, H1 | NY Open |
+| F | Trendline Break+Retest | Day | M15, H1 | London, NY |
+| G | Weekly Institutional | Swing | H4, D1, W1 | London, NY |
+| H | Fibonacci Cluster | Swing | H4, D1 | London, NY |
+
+### NAS100 (USTEC) -- 5 Strategies
+
+| ID | Name | Style | Timeframes | Session |
+|----|------|-------|-----------|---------|
+| I | ORB (Opening Range) | Scalp | M5, M15 | NY Open |
+| J | EMA Ribbon Scalp | Scalp | M1, M5 | NY Open, London |
+| K | Power of 3 (ICT) | Scalp | M5, M15 | NY Open |
+| L | Gap Fill | Day | M15, H1 | NY Open |
+| M | 20/50 EMA Pullback | Swing | H4, D1 | NY |
+
+### US500 (S&P 500) -- 3 Strategies
+
+| ID | Name | Style | Timeframes | Session |
+|----|------|-------|-----------|---------|
+| N | VWAP Mean Reversion | Scalp | M1, M5 | NY Open |
+| O | Multi-TF Trend | Day | M5, M15, H1 | London, NY |
+| P | RSI + Structure | Swing | D1, W1 | NY |
+
+### US30 (Dow Jones) -- 3 Strategies
+
+| ID | Name | Style | Timeframes | Session |
+|----|------|-------|-----------|---------|
+| Q | Round Number Bounce | Scalp | M5, M15 | NY Open, London |
+| R | ICT Silver Bullet | Day | M5, M15 | Silver Bullet windows |
+| S | Breakout-Retest | Swing | H4, D1 | NY |
+
+### Crypto (BTC/ETH) -- 6 Strategies
+
+| ID | Name | Style | Timeframes | Notes |
+|----|------|-------|-----------|-------|
+| T | BTC Round Number Bounce | Scalp | M5 | 24/7 trading |
+| U | ETH Trend Following | Day | H4 | 24/7 trading |
+| V | BTC Momentum Breakout | Scalp | M15 | 24/7 trading |
+| W | BTC RSI Divergence | Day | H1 | 24/7 trading |
+| X | ETH Order Block Sniper | Scalp | M5 | 24/7 trading |
+| Y | ETH Multi-TF Confluence | Swing | H4, D1 | 24/7 trading |
+
+---
+
+## Confluence Scoring
+
+Every signal passes through a `ConfluenceEngine` that scores it 0-100 based on multiple factors:
+
+- Trend alignment (multi-TF EMA/SMA agreement)
+- Momentum confirmation (RSI, MACD, Stochastic)
+- Volatility context (ATR, Bollinger Band position)
+- Structure levels (support/resistance, swing points)
+- Volume confirmation
+
+Quality tiers based on score:
+- **Elite** (85+): Highest confidence, full position size
+- **High** (70-84): Strong setup, standard size
+- **Normal** (60-69): Acceptable, reduced size
+- **Low** (<60): Filtered out
+
+---
+
+## Indicators
+
+| Module | Indicators |
+|--------|-----------|
+| `trend.py` | EMA (10/21/50/200), SMA, ADX, Ichimoku Cloud |
+| `momentum.py` | RSI, MACD, Stochastic, Williams %R, CCI |
+| `volatility.py` | ATR, Bollinger Bands, Keltner Channels, Standard Deviation |
+| `structure.py` | Swing highs/lows, support/resistance, BOS/CHoCH, Order Blocks, FVGs |
+| `volume.py` | Volume SMA, OBV, Volume Rate of Change, VWAP |
+| `confluence.py` | Multi-factor scoring engine combining all indicators |
+
+---
+
+## Dashboard
+
+Real-time Plotly Dash dashboard with:
+
+- **Signal Table**: All active signals with direction, score, quality tier, entry/SL/TP
+- **TradingView-style Charts**: Embedded interactive charts per instrument
+- **Strategy Performance**: Win rates, P&L, signal history per strategy
+- **Risk Monitor**: Daily P&L, open exposure, consecutive losses
+- **Journal View**: Complete trade history with analytics
+
+---
+
+## Backtesting Engine
+
+Built-in backtester for validating strategies on historical data:
+
+- Walk-forward optimization with configurable in-sample/out-of-sample splits
+- Per-strategy and multi-strategy backtesting
+- Metrics: win rate, profit factor, Sharpe ratio, max drawdown, R-multiples
+- Optimization job manager for parameter sweeps
+
+---
+
+## Risk Management
+
+- **Max risk per trade**: 1.0% (configurable)
+- **Max daily loss**: 3.0%
+- **Max weekly loss**: 6.0%
+- **Max monthly drawdown**: 10.0%
+- **Max concurrent trades**: 3
+- **Consecutive loss pause**: After 3 losses, pause 60 minutes
+- **Next-day risk reduction**: 0.5x after a losing day
+
+---
+
+## Installation
+
+### Prerequisites
+
+- Python 3.10+
+- MetaTrader 5 terminal running on Windows
+- MT5 broker account
+
+### Setup
+
 ```bash
-# Create virtual environment
-python -m venv .venv
-.venv\Scripts\activate
-
-# Install dependencies
+cd trading_system
 pip install -r requirements.txt
-
-# Configure
-copy .env.example .env
-# Edit .env with your symbol names
-
-# Launch
-python main.py
 ```
 
-## Configuration
+### Configuration
 
-Edit `.env` (copied from `.env.example`):
+1. Copy `.env.example` to `.env` and fill in:
+   ```
+   MT5_PATH=C:\Program Files\MetaTrader 5\terminal64.exe
+   MT5_LOGIN=12345678
+   MT5_PASSWORD=your_password
+   MT5_SERVER=YourBroker-Server
+   SYMBOL_GOLD=XAUUSD
+   SYMBOL_NAS100=USTEC
+   SYMBOL_US500=US500
+   SYMBOL_US30=US30
+   ENABLE_CRYPTO=false
+   MAX_RISK_PER_TRADE=1.0
+   MAX_DAILY_LOSS=3.0
+   ```
 
-```ini
-# MT5 terminal path (optional — auto-detects if only one installed)
-MT5_PATH=C:\Program Files\MetaTrader 5\terminal64.exe
+2. Adjust symbol names to match your broker's naming convention.
 
-# Symbol names (must match your broker's naming)
-SYMBOL_GOLD=XAUUSD
-SYMBOL_NAS100=USTEC
-SYMBOL_US500=US500
-SYMBOL_US30=US30
-
-# Risk management
-MAX_RISK_PER_TRADE=1.0
-MAX_DAILY_LOSS=3.0
-MAX_WEEKLY_LOSS=6.0
-
-# Alerts
-ENABLE_DESKTOP_ALERTS=true
-ENABLE_SOUND_ALERTS=true
-ENABLE_TELEGRAM=false
-TELEGRAM_BOT_TOKEN=
-TELEGRAM_CHAT_ID=
-
-# Dashboard
-DASH_HOST=127.0.0.1
-DASH_PORT=8050
-```
+---
 
 ## Usage
 
 ```bash
-# Full system (scanner + dashboard)
+# Launch full system with dashboard
 python main.py
 
-# Headless mode (scanner + alerts only, no web UI)
+# Headless scanner only (no dashboard UI)
 python main.py --no-dashboard
 
-# Specific strategies only
-python main.py --strategies A,B,D,I,Q
+# Enable only specific strategies
+python main.py --strategies A,B,D,I
 
-# Filter by instrument
-python main.py --strategies gold     # Strategies A-H
-python main.py --strategies nas100   # Strategies I-M
-python main.py --strategies us30     # Strategies Q-S
-
-# Filter by style
-python main.py --strategies scalp    # All scalp strategies
-python main.py --strategies swing    # All swing strategies
-
-# Custom host/port
-python main.py --host 0.0.0.0 --port 9090
+# Enable crypto strategies
+ENABLE_CRYPTO=true python main.py
 ```
 
-## Dashboard
+### CLI Flags
 
-Open `http://127.0.0.1:8050` after launch. The dashboard shows:
-
-- **Live Chart** — Candlestick with EMA/VWAP/Bollinger overlays, RSI subplot, signal markers
-- **KPI Cards** — Balance, Equity, Daily P&L, Open Positions, Win Rate, Risk Status
-- **Signal Scanner** — Real-time signal feed from all active strategies
-- **Alert Feed** — All alerts with severity levels
-- **Trade Journal** — Auto-synced closed trades from MT5
-- **Performance Stats** — Win rate, profit factor, expectancy, drawdown
-
-## Threading Model
-
-| Thread | Purpose | Interval |
-|--------|---------|----------|
-| Main | Dash web server | — |
-| DataFeed | MT5 candle polling | 2s |
-| Scanner | Strategy evaluation | 2s |
-| TradeSyncer | MT5 history → journal | 30s |
-
-All MT5 calls are serialized through a thread-safe singleton with `threading.Lock`.
-
-## Alert Channels
-
-| Channel | Config Key | Notes |
-|---------|-----------|-------|
-| Desktop | `ENABLE_DESKTOP_ALERTS` | Windows toast via plyer |
-| Sound | `ENABLE_SOUND_ALERTS` | Beep frequency by severity |
-| Telegram | `ENABLE_TELEGRAM` | Requires bot token + chat ID |
-
-Alerts are deduplicated via MD5 fingerprint with 5-minute cooldown.
-
-## Risk Management
-
-- Per-trade risk capped at configured % of balance
-- Daily/weekly/monthly loss limits enforced
-- Auto-pause after 3 consecutive losses (60 min)
-- Correlation blocks prevent simultaneous trades on NAS100+US500 or US500+US30
-- Position sizing: `Lots = (Balance × Risk%) / (SL_pips × Pip_value)`
-
-## Data Storage
-
-All data is stored in `data/trading.db` (SQLite):
-
-- `trades` — Closed trade records (auto-synced from MT5)
-- `signals_log` — Every signal generated
-- `alerts` — Alert history
-
-Logs are written to `data/logs/trading_YYYYMMDD.log` (rotating, 5MB × 5 backups).
+| Flag | Description |
+|------|------------|
+| `--no-dashboard` | Run scanner without the Dash UI |
+| `--strategies A,B,D` | Enable only specified strategy IDs |
+| `--scan-interval 300` | Scan interval in seconds (default: 300) |
 
 ---
 
-**Note:** This system generates signals and alerts only — it does **not** auto-execute trades. You retain full manual control over trade entry and management.
+## Results & Output
+
+### Signal Example
+
+```
+[SIGNAL] Strategy A: London Breakout Trap
+  Instrument: XAUUSD | Direction: BUY | Strength: STRONG
+  Entry: 2345.50 | SL: 2340.00 | TP: 2356.50 | RR: 2.0
+  Score: 82/100 | Tier: HIGH
+  Confluence: [trend_aligned, rsi_oversold, at_support, volume_spike]
+```
+
+### Dashboard Output
+
+The dashboard runs at `http://localhost:8050` and shows:
+- Live signal table updated every scan interval
+- Per-strategy win rate and P&L tracking
+- Interactive charts with entry/exit markers
+
+### Journal Database
+
+All signals and trades logged to SQLite (`data/trading.db`) with full metadata for later analysis.
+
+---
+
+## Project Structure
+
+```
+trading_system/
+  main.py                          # Entry point
+  config.py                        # All configuration (symbols, risk, strategies)
+  requirements.txt
+  .env.example                     # Environment template
+  core/
+    mt5_connection.py              # MT5 terminal wrapper
+    data_feed.py                   # Multi-TF OHLCV data fetcher
+    risk_manager.py                # Position sizing, daily limits
+    backtest_engine.py             # Walk-forward backtester
+    optimizer.py                   # Parameter optimization
+  strategies/
+    __init__.py                    # Strategy registry (A-Y)
+    base.py                        # BaseStrategy + Signal model
+    gold_strategies.py             # Strategies A-H (Gold)
+    nas100_strategies.py           # Strategies I-M (NAS100)
+    us500_strategies.py            # Strategies N-P (US500)
+    us30_strategies.py             # Strategies Q-S (US30)
+    crypto_strategies.py           # Strategies T-Y (BTC/ETH)
+  indicators/
+    trend.py                       # EMA, SMA, ADX, Ichimoku
+    momentum.py                    # RSI, MACD, Stochastic
+    volatility.py                  # ATR, Bollinger, Keltner
+    structure.py                   # Swing points, BOS, OBs, FVGs
+    volume.py                      # OBV, VWAP, Volume SMA
+    confluence.py                  # Multi-factor scoring engine
+  dashboard/
+    app.py                         # Dash application
+    layout.py                      # UI layout
+    charts.py                      # Plotly chart builders
+  alerts/
+    alert_engine.py                # Multi-level alert system
+  journal/
+    journal.py                     # SQLite journal + analytics + trade syncer
+  data/
+    logs/                          # Rotating log files
+```
