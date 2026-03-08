@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.venv/
+*.db
+*.log
+.env
+.env.*
+\!.env.example
+.vscode/
+.ruff_cache/
+data/*.db

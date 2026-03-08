@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Strategy Chart</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; background: #0d1117; color: #c9d1d9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace; overflow: hidden; }
+
+  /* ── Main Layout ── */
+  .container { display: flex; height: 100vh; width: 100%; }
+
+  /* ── Guide Panel (left) ── */
+  .guide-panel {
+    width: 340px; min-width: 300px; background: #161b22;
+    border-right: 2px solid #30363d; overflow-y: auto; flex-shrink: 0;
+    scrollbar-width: thin; scrollbar-color: #30363d #161b22;
+  }
+  .guide-panel::-webkit-scrollbar { width: 6px; }
+  .guide-panel::-webkit-scrollbar-track { background: #161b22; }
+  .guide-panel::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+
+  .guide-header {
+    position: sticky; top: 0; z-index: 10; background: #161b22;
+    padding: 12px 16px 8px; border-bottom: 1px solid #30363d;
+  }
+  .guide-header h2 { color: #58a6ff; font-size: 13px; letter-spacing: 0.5px; }
+  .strat-title {
+    color: #c9d1d9; font-weight: 700; font-size: 13px; margin-top: 8px;
+    padding: 8px 12px; background: #0d1117; border-radius: 6px;
+    border-left: 3px solid #58a6ff;
+  }
+
+  /* ── Sections ── */
+  .section { padding: 0 16px; margin-bottom: 2px; }
+  .section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 0 6px; cursor: pointer; user-select: none;
+    border-bottom: 1px solid #21262d;
+  }
+  .section-header h3 {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .section-header .toggle-icon { font-size: 10px; color: #8b949e; transition: transform 0.2s; }
+  .section-header .toggle-icon.open { transform: rotate(90deg); }
+  .section-body { overflow: hidden; transition: max-height 0.25s ease; }
+  .section-body.collapsed { max-height: 0 !important; }
+
+  /* ── Pattern Flow ── */
+  .flow-diagram {
+    display: flex; align-items: center; flex-wrap: wrap;
+    gap: 4px; padding: 8px 0;
+  }
+  .flow-step {
+    display: inline-flex; align-items: center; gap: 2px;
+    font-size: 10px; padding: 4px 8px; border-radius: 4px;
+    background: #0d1117; border: 1px solid #30363d; color: #c9d1d9;
+    white-space: nowrap; font-weight: 600;
+  }
+  .flow-step:first-child { border-color: #58a6ff; color: #58a6ff; }
+  .flow-step:last-child { border-color: #3fb950; color: #3fb950; }
+  .flow-arrow { color: #8b949e; font-size: 12px; font-weight: 700; }
+
+  /* ── Levels ── */
+  .level-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 5px 0; font-size: 11px;
+  }
+  .level-line {
+    width: 24px; height: 0; flex-shrink: 0;
+    border-top-width: 2px; border-top-color: currentColor;
+  }
+  .level-line.solid { border-top-style: solid; }
+  .level-line.dashed { border-top-style: dashed; }
+  .level-line.dotted { border-top-style: dotted; }
+  .level-name { font-weight: 700; min-width: 70px; }
+  .level-desc { color: #8b949e; font-size: 10px; }
+
+  /* ── Ranges ── */
+  .range-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 5px 0; font-size: 11px;
+  }
+  .range-swatch {
+    width: 20px; height: 14px; border-radius: 3px; flex-shrink: 0;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .range-name { font-weight: 700; min-width: 70px; }
+  .range-desc { color: #8b949e; font-size: 10px; }
+
+  /* ── Steps (annotations) ── */
+  .anno-item {
+    font-size: 11px; line-height: 1.55; padding: 5px 10px;
+    margin-bottom: 3px; border-radius: 4px; background: #0d1117;
+    border-left: 2px solid #30363d;
+  }
+  .anno-item.step { border-left-color: #3fb950; }
+  .anno-item.indicator { border-left-color: #d29922; color: #d29922; font-family: monospace; font-size: 10px; }
+  .anno-item.sltp { border-left-color: #f85149; font-weight: 600; }
+  .anno-item.draw { border-left-color: #58a6ff; color: #79c0ff; }
+
+  /* ── Key Rules ── */
+  .rule-item {
+    display: flex; align-items: flex-start; gap: 6px;
+    padding: 4px 0; font-size: 11px; line-height: 1.45;
+  }
+  .rule-icon { color: #d29922; font-size: 11px; flex-shrink: 0; margin-top: 1px; }
+  .rule-critical { color: #f85149; font-weight: 600; }
+
+  /* ── Studies badges ── */
+  .studies-wrap { padding: 8px 0; display: flex; flex-wrap: wrap; gap: 4px; }
+  .study-badge {
+    font-size: 10px; padding: 2px 8px; border-radius: 10px;
+    background: #0d1117; border: 1px solid #30363d;
+    color: #c9d1d9; font-family: monospace;
+  }
+  .study-badge .param { color: #3fb950; }
+
+  /* ── Chart Area ── */
+  .chart-area { flex: 1; min-width: 0; position: relative; }
+  #tv_chart_container { width: 100%; height: 100%; }
+
+  /* ── Toggle Panel Button ── */
+  .toggle-btn {
+    position: absolute; top: 8px; left: 8px; z-index: 200;
+    background: #161b22ee; color: #58a6ff; border: 1px solid #30363d;
+    border-radius: 4px; padding: 4px 10px; font-size: 11px;
+    cursor: pointer; font-weight: 600; backdrop-filter: blur(4px);
+  }
+  .toggle-btn:hover { background: #21262dee; }
+
+  /* ── Chart Overlays ── */
+  .overlay {
+    position: absolute; z-index: 100; border-radius: 8px;
+    background: #161b22e8; border: 1px solid #30363d;
+    backdrop-filter: blur(6px); box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    transition: opacity 0.3s;
+  }
+  .overlay.hidden { opacity: 0; pointer-events: none; }
+
+  /* Levels & Ranges overlay (top-right) */
+  .overlay-levels {
+    top: 8px; right: 16px; padding: 10px 14px;
+    max-width: 320px; max-height: 45vh; overflow-y: auto;
+  }
+  .overlay-levels h4 {
+    font-size: 11px; color: #58a6ff; text-transform: uppercase;
+    letter-spacing: 0.5px; margin-bottom: 6px;
+    padding-bottom: 4px; border-bottom: 1px solid #30363d;
+  }
+  .overlay-levels .olv-item {
+    display: flex; align-items: center; gap: 6px;
+    padding: 3px 0; font-size: 10px;
+  }
+  .overlay-levels .olv-line {
+    width: 18px; height: 0; flex-shrink: 0; border-top-width: 2px;
+  }
+  .overlay-levels .olv-swatch {
+    width: 14px; height: 10px; border-radius: 2px; flex-shrink: 0;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .overlay-levels .olv-name { font-weight: 600; }
+
+  /* Flow overlay (bottom-center) */
+  .overlay-flow {
+    bottom: 12px; left: 50%; transform: translateX(-50%);
+    padding: 8px 16px; display: flex; align-items: center; gap: 6px;
+  }
+  .overlay-flow .of-step {
+    font-size: 10px; padding: 3px 10px; border-radius: 4px;
+    border: 1px solid #30363d; background: #0d1117; color: #c9d1d9;
+    font-weight: 600; white-space: nowrap;
+  }
+  .overlay-flow .of-step.first { border-color: #58a6ff; color: #58a6ff; }
+  .overlay-flow .of-step.last { border-color: #3fb950; color: #3fb950; }
+  .overlay-flow .of-arrow { color: #8b949e; font-weight: 700; font-size: 12px; }
+
+  /* Key rules overlay (bottom-right) */
+  .overlay-rules {
+    bottom: 52px; right: 16px; padding: 10px 14px; max-width: 300px;
+  }
+  .overlay-rules h4 {
+    font-size: 11px; color: #d29922; text-transform: uppercase;
+    letter-spacing: 0.5px; margin-bottom: 6px;
+    padding-bottom: 4px; border-bottom: 1px solid #30363d;
+  }
+  .overlay-rules .or-item {
+    display: flex; align-items: flex-start; gap: 5px;
+    padding: 2px 0; font-size: 10px; line-height: 1.4;
+  }
+  .overlay-rules .or-icon { color: #d29922; flex-shrink: 0; }
+
+  /* Overlay toggle */
+  .overlay-toggle-bar {
+    position: absolute; top: 8px; right: 16px; z-index: 201;
+    display: flex; gap: 4px;
+  }
+  .overlay-toggle-bar.has-panel { right: 16px; }
+  .ov-btn {
+    background: #161b22ee; color: #8b949e; border: 1px solid #30363d;
+    border-radius: 4px; padding: 3px 8px; font-size: 10px;
+    cursor: pointer; backdrop-filter: blur(4px);
+  }
+  .ov-btn:hover { color: #c9d1d9; background: #21262dee; }
+  .ov-btn.active { color: #58a6ff; border-color: #58a6ff; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <!-- ═══ GUIDE PANEL ═══ -->
+  <div class="guide-panel" id="guide-panel">
+    <div class="guide-header">
+      <h2>&#x1F4D6; STRATEGY GUIDE</h2>
+      <div class="strat-title" id="strat-title"></div>
+    </div>
+
+    <!-- PATTERN FLOW -->
+    <div class="section">
+      <div class="section-header" onclick="toggleSection(this)">
+        <h3 style="color:#58a6ff">&#x26A1; <span>PATTERN FLOW</span></h3>
+        <span class="toggle-icon open">&#x25B6;</span>
+      </div>
+      <div class="section-body" id="flow-section" style="max-height:200px"></div>
+    </div>
+
+    <!-- KEY LEVELS -->
+    <div class="section">
+      <div class="section-header" onclick="toggleSection(this)">
+        <h3 style="color:#3fb950">&#x1F4CF; <span>KEY LEVELS</span></h3>
+        <span class="toggle-icon open">&#x25B6;</span>
+      </div>
+      <div class="section-body" id="levels-section" style="max-height:400px"></div>
+    </div>
+
+    <!-- RANGES / ZONES -->
+    <div class="section">
+      <div class="section-header" onclick="toggleSection(this)">
+        <h3 style="color:#d29922">&#x1F3A8; <span>RANGES / ZONES</span></h3>
+        <span class="toggle-icon open">&#x25B6;</span>
+      </div>
+      <div class="section-body" id="ranges-section" style="max-height:400px"></div>
+    </div>
+
+    <!-- STEP-BY-STEP -->
+    <div class="section">
+      <div class="section-header" onclick="toggleSection(this)">
+        <h3 style="color:#c9d1d9">&#x1F4DD; <span>STEP BY STEP</span></h3>
+        <span class="toggle-icon open">&#x25B6;</span>
+      </div>
+      <div class="section-body" id="annotations-section" style="max-height:600px"></div>
+    </div>
+
+    <!-- KEY RULES -->
+    <div class="section">
+      <div class="section-header" onclick="toggleSection(this)">
+        <h3 style="color:#d29922">&#x26A0;&#xFE0F; <span>KEY RULES</span></h3>
+        <span class="toggle-icon open">&#x25B6;</span>
+      </div>
+      <div class="section-body" id="rules-section" style="max-height:400px"></div>
+    </div>
+
+    <!-- INDICATORS -->
+    <div class="section">
+      <div class="section-header" onclick="toggleSection(this)">
+        <h3 style="color:#3fb950">&#x1F4CA; <span>INDICATORS LOADED</span></h3>
+        <span class="toggle-icon open">&#x25B6;</span>
+      </div>
+      <div class="section-body" id="studies-section" style="max-height:200px">
+        <div class="studies-wrap" id="studies-list"></div>
+      </div>
+    </div>
+
+    <!-- DRAWING TIPS -->
+    <div class="section" style="padding-bottom:20px">
+      <div class="section-header" onclick="toggleSection(this)">
+        <h3 style="color:#79c0ff">&#x270F;&#xFE0F; <span>DRAWING TIPS</span></h3>
+        <span class="toggle-icon open">&#x25B6;</span>
+      </div>
+      <div class="section-body" id="draw-section" style="max-height:200px">
+        <div style="padding:8px 0;font-size:10px;color:#8b949e;line-height:1.5">
+          Use TradingView's <strong style="color:#58a6ff">drawing toolbar</strong> (left side of chart) to add:<br>
+          &#x2500; <strong>Horizontal lines</strong> for key levels<br>
+          &#x2500; <strong>Rectangles</strong> for ranges / zones<br>
+          &#x2500; <strong>Text labels</strong> for annotations<br>
+          &#x2500; <strong>Trend lines</strong> for structure<br>
+          &#x2500; <strong>Fib retracement</strong> for H strategy
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ CHART AREA ═══ -->
+  <div class="chart-area" id="chart-area">
+    <!-- Panel toggle -->
+    <button class="toggle-btn" id="toggle-panel" onclick="togglePanel()">&#x25C0; Hide</button>
+
+    <!-- Overlay toggle buttons -->
+    <div class="overlay-toggle-bar" id="overlay-bar">
+      <button class="ov-btn active" id="ov-btn-levels" onclick="toggleOverlay('levels')">&#x1F4CF; Levels</button>
+      <button class="ov-btn active" id="ov-btn-rules" onclick="toggleOverlay('rules')">&#x26A0; Rules</button>
+      <button class="ov-btn active" id="ov-btn-flow" onclick="toggleOverlay('flow')">&#x26A1; Flow</button>
+    </div>
+
+    <!-- Floating overlays ON the chart -->
+    <div class="overlay overlay-levels" id="overlay-levels"></div>
+    <div class="overlay overlay-rules" id="overlay-rules"></div>
+    <div class="overlay overlay-flow" id="overlay-flow"></div>
+
+    <!-- TradingView chart -->
+    <div id="tv_chart_container"></div>
+  </div>
+</div>
+
+<script>
+// ── Read config from URL hash ──
+var config;
+try {
+  var hash = decodeURIComponent(window.location.hash.slice(1));
+  config = JSON.parse(hash);
+} catch (e) {
+  config = {
+    symbol: "OANDA:XAUUSD", interval: "15", studies: [],
+    annotations: ["No config - open from dashboard"], levels: [], ranges: [],
+    flow: [], key_rules: [], title: "TradingView Chart"
+  };
+}
+
+// ── Populate strategy title ──
+document.getElementById("strat-title").textContent = config.title || "Strategy Chart";
+
+// ── PATTERN FLOW (guide + overlay) ──
+var flowSection = document.getElementById("flow-section");
+var overlayFlow = document.getElementById("overlay-flow");
+var flowHTML = '<div class="flow-diagram">';
+var overlayFlowHTML = '';
+(config.flow || []).forEach(function(step, i, arr) {
+  var isFirst = i === 0, isLast = i === arr.length - 1;
+  flowHTML += '<span class="flow-step' + (isFirst ? '" style="border-color:#58a6ff;color:#58a6ff"' : isLast ? '" style="border-color:#3fb950;color:#3fb950"' : '"') + '>' + step + '</span>';
+  overlayFlowHTML += '<span class="of-step' + (isFirst ? ' first' : isLast ? ' last' : '') + '">' + step + '</span>';
+  if (i < arr.length - 1) {
+    flowHTML += '<span class="flow-arrow">&#x2192;</span>';
+    overlayFlowHTML += '<span class="of-arrow">&#x2192;</span>';
+  }
+});
+flowHTML += '</div>';
+flowSection.innerHTML = flowHTML;
+overlayFlow.innerHTML = overlayFlowHTML;
+
+// ── KEY LEVELS (guide + overlay) ──
+var levelsSection = document.getElementById("levels-section");
+var overlayLevels = document.getElementById("overlay-levels");
+var levelsGuideHTML = '';
+var levelsOverlayHTML = '<h4>&#x1F4CF; Key Levels</h4>';
+(config.levels || []).forEach(function(lv) {
+  var name = lv.name || lv[0] || '';
+  var color = lv.color || lv[1] || '#c9d1d9';
+  var style = lv.style || lv[2] || 'solid';
+  var desc = lv.desc || lv[3] || '';
+  levelsGuideHTML += '<div class="level-item">'
+    + '<div class="level-line ' + style + '" style="color:' + color + '"></div>'
+    + '<span class="level-name" style="color:' + color + '">' + name + '</span>'
+    + '<span class="level-desc">' + desc + '</span>'
+    + '</div>';
+  levelsOverlayHTML += '<div class="olv-item">'
+    + '<div class="olv-line" style="border-top-style:' + style + ';border-top-color:' + color + '"></div>'
+    + '<span class="olv-name" style="color:' + color + '">' + name + '</span>'
+    + '</div>';
+});
+
+// Add ranges to the overlay too
+if ((config.ranges || []).length > 0) {
+  levelsOverlayHTML += '<div style="margin-top:6px;padding-top:6px;border-top:1px solid #30363d">';
+  levelsOverlayHTML += '<div style="font-size:10px;color:#d29922;font-weight:600;margin-bottom:4px">ZONES</div>';
+  (config.ranges || []).forEach(function(rg) {
+    var name = rg.name || rg[0] || '';
+    var color = rg.color || rg[1] || 'rgba(88,166,255,0.15)';
+    levelsOverlayHTML += '<div class="olv-item">'
+      + '<div class="olv-swatch" style="background:' + color + '"></div>'
+      + '<span class="olv-name">' + name + '</span>'
+      + '</div>';
+  });
+  levelsOverlayHTML += '</div>';
+}
+levelsSection.innerHTML = levelsGuideHTML;
+overlayLevels.innerHTML = levelsOverlayHTML;
+
+// ── RANGES / ZONES (guide panel) ──
+var rangesSection = document.getElementById("ranges-section");
+var rangesHTML = '';
+(config.ranges || []).forEach(function(rg) {
+  var name = rg.name || rg[0] || '';
+  var color = rg.color || rg[1] || 'rgba(88,166,255,0.15)';
+  var desc = rg.desc || rg[2] || '';
+  rangesHTML += '<div class="range-item">'
+    + '<div class="range-swatch" style="background:' + color + '"></div>'
+    + '<span class="range-name">' + name + '</span>'
+    + '<span class="range-desc">' + desc + '</span>'
+    + '</div>';
+});
+rangesSection.innerHTML = rangesHTML;
+
+// ── STEP-BY-STEP (annotations) ──
+var annoSection = document.getElementById("annotations-section");
+var annoHTML = '';
+(config.annotations || []).forEach(function(text) {
+  var cls = "anno-item";
+  if (text.match(/^[\u2500\u2550\u2014]/)) return; // skip title dividers
+  if (text.match(/^[\u2460-\u2469]/)) cls = "anno-item step";
+  else if (text.match(/^(EMA|SMA|RSI|VWAP|ATR|Volume|Stochastic|Supertrend|MACD)/i) || (text.indexOf("= ") > -1 && text.indexOf("|") > -1))
+    cls = "anno-item indicator";
+  else if (text.match(/^SL:|^TP:|SL:.*TP:|SL\b.*\|.*TP\b/i)) cls = "anno-item sltp";
+  else if (text.match(/draw|line|rectangle|box|horizontal|vertical|fibonacci/i)) cls = "anno-item draw";
+  annoHTML += '<div class="' + cls + '">' + text + '</div>';
+});
+annoSection.innerHTML = annoHTML;
+
+// ── KEY RULES (guide + overlay) ──
+var rulesSection = document.getElementById("rules-section");
+var overlayRules = document.getElementById("overlay-rules");
+var rulesGuideHTML = '';
+var rulesOverlayHTML = '<h4>&#x26A0;&#xFE0F; Key Rules</h4>';
+(config.key_rules || []).forEach(function(rule) {
+  var isCritical = rule.match(/only|must|never|do not|required/i);
+  rulesGuideHTML += '<div class="rule-item">'
+    + '<span class="rule-icon">&#x25B8;</span>'
+    + '<span' + (isCritical ? ' class="rule-critical"' : '') + '>' + rule + '</span>'
+    + '</div>';
+  rulesOverlayHTML += '<div class="or-item">'
+    + '<span class="or-icon">&#x25B8;</span>'
+    + '<span' + (isCritical ? ' style="color:#f85149;font-weight:600"' : '') + '>' + rule + '</span>'
+    + '</div>';
+});
+rulesSection.innerHTML = rulesGuideHTML;
+overlayRules.innerHTML = rulesOverlayHTML;
+
+// ── STUDIES (indicator badges) ──
+var studiesList = document.getElementById("studies-list");
+var studyNames = {
+  "MAExp@tv-basicstudies": "EMA", "MASimple@tv-basicstudies": "SMA",
+  "RSI@tv-basicstudies": "RSI", "VWAP@tv-basicstudies": "VWAP",
+  "ATR@tv-basicstudies": "ATR", "Volume@tv-basicstudies": "Volume",
+  "Stochastic@tv-basicstudies": "Stochastic", "Supertrend@tv-basicstudies": "Supertrend",
+  "SuperTrend@tv-basicstudies": "Supertrend", "MACD@tv-basicstudies": "MACD",
+  "BB@tv-basicstudies": "Bollinger Bands"
+};
+(config.studies || []).forEach(function(s) {
+  var id = s[0], params = s[1] || {};
+  var badge = document.createElement("span");
+  badge.className = "study-badge";
+  var name = studyNames[id] || id.split("@")[0];
+  var pStr = Object.keys(params).map(function(k) { return k + "=" + params[k]; }).join(", ");
+  badge.innerHTML = pStr ? name + ' <span class="param">(' + pStr + ')</span>' : name;
+  studiesList.appendChild(badge);
+});
+
+// ── Build TradingView Widget ──
+var container = document.getElementById("tv_chart_container");
+var widgetStudies = [];
+var seen = {};
+(config.studies || []).forEach(function(s) {
+  if (!seen[s[0]]) { seen[s[0]] = true; widgetStudies.push(s[0]); }
+});
+
+var widgetConfig = {
+  autosize: true, symbol: config.symbol, interval: config.interval,
+  timezone: "Etc/UTC", theme: "dark", style: "1", locale: "en",
+  hide_top_toolbar: false, hide_legend: false, allow_symbol_change: true,
+  save_image: true, details: true, calendar: false, hide_volume: false,
+  support_host: "https://www.tradingview.com", studies: widgetStudies
+};
+
+var widgetDiv = document.createElement("div");
+widgetDiv.className = "tradingview-widget-container";
+widgetDiv.style.height = "100%"; widgetDiv.style.width = "100%";
+var innerDiv = document.createElement("div");
+innerDiv.className = "tradingview-widget-container__widget";
+innerDiv.style.height = "100%"; innerDiv.style.width = "100%";
+widgetDiv.appendChild(innerDiv);
+var script = document.createElement("script");
+script.type = "text/javascript";
+script.src = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
+script.async = true;
+script.textContent = JSON.stringify(widgetConfig);
+widgetDiv.appendChild(script);
+container.appendChild(widgetDiv);
+
+// ── Panel toggle ──
+var panelVisible = true;
+function togglePanel() {
+  var panel = document.getElementById("guide-panel");
+  var btn = document.getElementById("toggle-panel");
+  panelVisible = !panelVisible;
+  panel.style.display = panelVisible ? "block" : "none";
+  btn.innerHTML = panelVisible ? "&#x25C0; Hide" : "&#x25B6; Guide";
+}
+
+// ── Section collapse/expand ──
+function toggleSection(header) {
+  var body = header.nextElementSibling;
+  var icon = header.querySelector(".toggle-icon");
+  body.classList.toggle("collapsed");
+  icon.classList.toggle("open");
+}
+
+// ── Overlay toggles ──
+var overlayState = { levels: true, rules: true, flow: true };
+function toggleOverlay(name) {
+  overlayState[name] = !overlayState[name];
+  var el = document.getElementById("overlay-" + name);
+  var btn = document.getElementById("ov-btn-" + name);
+  if (overlayState[name]) {
+    el.classList.remove("hidden");
+    btn.classList.add("active");
+  } else {
+    el.classList.add("hidden");
+    btn.classList.remove("active");
+  }
+}
+
+// Position overlay bar correctly when panel is toggled
+var observer = new MutationObserver(function() {
+  var bar = document.getElementById("overlay-bar");
+  bar.style.top = "8px";
+});
+observer.observe(document.getElementById("guide-panel"), { attributes: true, attributeFilter: ["style"] });
+</script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+MetaTrader5>=5.0.45
+pandas>=2.0.0
+numpy>=1.24.0
+plotly>=5.18.0
+dash>=2.14.0
+dash-bootstrap-components>=1.5.0
+pydantic>=2.5.0
+python-dotenv>=1.0.0
+plyer>=2.1.0
+APScheduler>=3.10.0
+requests>=2.31.0
+pyarrow>=14.0.0
